@@ -4,22 +4,36 @@
   <title>Admin - Share Screen</title>
 </head>
 <body>
-  <h2>Admin - Share Your Screen</h2>
-  <button onclick="startSharing()">Start Sharing</button>
-  <video id="localVideo" autoplay playsinline></video>
+  <h2>Admin - Share Screen</h2>
+  <button id="startShare">Start Sharing</button>
 
+  <script src="firebase.js" type="module"></script>
   <script type="module">
-    import { db } from "./firebase.js";
-    import { ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
 
-    async function startSharing() {
+    const db = window.db;
+    let pc;
+
+    document.getElementById("startShare").onclick = async () => {
+      pc = new RTCPeerConnection();
+
+      // Capture screen
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-      document.getElementById("localVideo").srcObject = stream;
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-      // Save a "flag" in Firebase so users know sharing started
-      await set(ref(db, "status"), { sharing: true, startedAt: Date.now() });
-    }
-    window.startSharing = startSharing;
+      // Save offer in Firebase
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      set(ref(db, "webrtc/offer"), offer);
+
+      // Listen for answer
+      onValue(ref(db, "webrtc/answer"), async snapshot => {
+        const answer = snapshot.val();
+        if (answer && !pc.currentRemoteDescription) {
+          await pc.setRemoteDescription(answer);
+        }
+      });
+    };
   </script>
 </body>
 </html>
