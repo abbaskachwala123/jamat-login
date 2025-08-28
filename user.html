@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>User - View Screen</title>
+</head>
+<body>
+  <h2>User - Watch Admin Screen</h2>
+  <video id="remoteVideo" autoplay playsinline controls></video>
+
+  <script type="module">
+    import { db } from "./firebase.js";
+    import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const video = document.getElementById("remoteVideo");
+
+    // Right now, just listens for sharing flag (later we’ll hook WebRTC stream)
+    onValue(ref(db, "status"), (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.sharing) {
+        alert("Admin started screen sharing!");
+        // Here is where WebRTC session handling will connect the actual video
+      }
+    });
+  </script>
+</body>
+</html>
