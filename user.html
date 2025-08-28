@@ -1,24 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>User - View Screen</title>
+  <title>User - Watch Admin Screen</title>
 </head>
 <body>
   <h2>User - Watch Admin Screen</h2>
-  <video id="remoteVideo" autoplay playsinline controls></video>
+  <video id="video" autoplay playsinline controls></video>
 
+  <script src="firebase.js" type="module"></script>
   <script type="module">
-    import { db } from "./firebase.js";
-    import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
 
-    const video = document.getElementById("remoteVideo");
+    const db = window.db;
+    const video = document.getElementById("video");
+    let pc = new RTCPeerConnection();
 
-    // Right now, just listens for sharing flag (later we’ll hook WebRTC stream)
-    onValue(ref(db, "status"), (snapshot) => {
-      const data = snapshot.val();
-      if (data && data.sharing) {
-        alert("Admin started screen sharing!");
-        // Here is where WebRTC session handling will connect the actual video
+    pc.ontrack = (event) => {
+      video.srcObject = event.streams[0];
+    };
+
+    // Listen for admin's offer
+    onValue(ref(db, "webrtc/offer"), async snapshot => {
+      const offer = snapshot.val();
+      if (offer) {
+        await pc.setRemoteDescription(offer);
+
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        // Save answer back to Firebase
+        set(ref(db, "webrtc/answer"), answer);
       }
     });
   </script>
